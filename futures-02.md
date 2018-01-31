@@ -161,7 +161,7 @@ crates. Expect that this crate will publish more frequent semver-breaking
 changes, but that updating will not normally result in significant or
 widespread breakage.
 
-This change comes alongside he release of the new `tokio` crate.
+This change comes alongside the release of the new `tokio` crate.
 These crates offer greatly easier-to-use and easier-to-evolve APIs.
 
 # Reference-level explanation
