@@ -126,7 +126,7 @@ There is an impending release of the `tokio` crate which will use `mio` 0.7.
 Transitioning to use these new APIs will already require some amount of library
 breakage or deprecation and replacement. Specifically, functions which took
 an explicit handle to a `tokio` reactor core will no longer need to do so.
-Functions which formerly accepted the old tokio-core` handles will not be
+Functions which formerly accepted the old `tokio-core` handles will not be
 compatible with the new `mio` 0.7-based `tokio` crate.
 
 Releasing `futures` 0.2 at the same as `tokio` would consolidate the API
