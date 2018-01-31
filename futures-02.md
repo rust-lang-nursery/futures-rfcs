@@ -305,6 +305,14 @@ This crate will depend only on `futures-core`.
 This crate is a minimal addition on `futures-core` designed for low churn
 so that channels may appear in the public APIs of libraries.
 
+`futures-channel` will not include a dependency on the `futures-sink` crate
+because it is more volatile. In order to have channels implement the `Sink`
+trait, channels in `futures-channel` will expose `poll_send` methods which
+will be used to implement `Sink` inside of the `futures-sink` crate.
+
+This is the only crate that is not compatible with `no_std`, as it relies
+on synchronization primitives from `std`.
+
 ### `futures-util`
 
 `futures-util` contains a number of convenient combinator functions for
