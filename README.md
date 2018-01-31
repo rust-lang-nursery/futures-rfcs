@@ -5,6 +5,7 @@ Much like Rust's [RFC repo](https://github.com/rust-lang/rfcs), this repository 
 Decisions will ultimately rest on consensus of the futures core team:
 
 - @alexcrichton
-- @carllerche
 - @cramertj
 - @aturon
+
+and will seek consensus from stakeholders as usual. 
