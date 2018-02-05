@@ -137,25 +137,23 @@ pub trait Stream {
 }
 
 pub trait AsyncRead {
-    type Error;
     unsafe fn initializer(&self) -> Initializer { ... }
 
     fn poll_read(&mut self, buf: &mut [u8], ctx: &mut Context)
-        -> Poll<usize, Self::Error>;
+        -> Poll<usize, io::Error>;
 
     fn poll_vectored_read(&mut self, vec: &mut [&mut IoVec], ctx: &mut Context)
-        -> Poll<usize, Self::Error> { ... }
+        -> Poll<usize, io::Error> { ... }
 }
 
 pub trait AsyncWrite {
-    type Error;
     fn poll_write(&mut self, buf: &[u8], ctx: &mut Context)
-        -> Poll<usize, Self::Error>;
+        -> Poll<usize, io::Error>;
 
     fn poll_vectored_write(&mut self, vec: &[&IoVec], ctx: &mut Context)
-        -> Poll<usize, Self::Error> { ... }
+        -> Poll<usize, io::Error> { ... }
 
-    fn poll_close(&mut self, ctx: &mut Context) -> Poll<(), Self::Error>;
+    fn poll_close(&mut self, ctx: &mut Context) -> Poll<(), io::Error>;
 }
 ```
 
