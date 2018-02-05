@@ -6,11 +6,13 @@
 # Summary
 [summary]: #summary
 
-Learnability, readability, and `no_std`-compatibility improvements achieved by
+Learnability, reasoning, debuggability and `no_std`-compatibility improvements achieved by
 making task wakeup handles into explicit arguments.
 
 # Motivation
 [motivation]: #motivation
+
+## Learnability
 
 The `futures` task wakeup mechanism is [a regular source of confusion for new
 users][explicit task issue]. Looking at the signature of `Future::poll`, it's
@@ -30,34 +32,43 @@ when you return `NotReady`, or else you might never be `poll`ed again. The
 trick to the API is that there is an implicit `Task` argument to `Future::poll`
 which is passed using thread-local storage. This `Task` argument must be
 `notify`d by the `Future` in order for the task to awaken and `poll` again.
-
-Once users become aware of the TLS `Task`, it's rare that this implicit argument
-is the source of bugs or confusion. Storing the `Task` in TLS is also slightly
-more ergonomic when writing manual `Future` implementations since you don't
-have to manually plumb through a wakeup handle.
-
-However, as described earlier, this ergonomic benefit comes at the cost of
-discoverability: it's necessary to read and understand written documentation
-in order to use or implement the `poll` function directly. Additionally, the
-implicit argument makes it more difficult to tell which functions aside from
-`poll` will use the `Task` handle to schedule a wakeup. Finally, and perhaps
-most importantly, the explicit argument is never seen by users who only use
-futures via combinators or async-await syntax, so the ergonomic impact to
-such users in minimal.
-
-This RFC proposes to resolve these issues by making the `Task` wakeup handle
-into an explicit argument.
+It's essential to remember to do this, and to ensure that the right schedulings
+occur on every code path.
 
 [explicit task issue]: https://github.com/alexcrichton/futures-rs/issues/129
 
-## Other Nonlearnability-based Benefits
+## Reasoning about code
 
-Since this structure no longer uses TLS, it also makes it easier to support
-the use of `futures` in `no_std` environments.
+The implicit `Task` argument makes it difficult to tell which functions
+aside from `poll` will use the `Task` handle to schedule a wakeup. That has a
+few implications.
 
-The `&mut Context` makes it possible to provide guaranteed exclusive access
-to task-local values, so it will no longer be necessary tu use `RefCell` or
-similar in mutable task-locals.
+First, it's easy to accidentally call a function that will attempt to access
+the task outside of a task context. Doing so will result in a panic, but it 
+would be better to detect this mistake statically.
+
+Second, and relatedly, it is hard to audit a piece of code for which calls
+might involve scheduling a wakeup--something that is critical to get right
+in order to avoid "lost wakeups", which are far harder to debug than an
+explicit panic.
+
+## Debuggability
+
+Today's implicit TLS task system provides us with fewer "hooks" for adding debugging
+tools to the task system. Deadlocks and lost wakeups are some of the trickiest things
+to track down with futures code today, and it's possible that by using a "two stage"
+system like the one proposed in this RFC, we will have more room for adding debugging 
+hooks to track the precise points at which queing for wakeup occurred, and so on.
+
+More generally, the explicit `Context` argument and distinct `Waker` type provide greater
+scope for extensibility of the task system.
+
+## no_std
+
+While it's possible to use futures in `no_std` environments today, the approach
+is somewhat of a hack. Threading an explicit `&mut Context` argument makes no_std
+support entirely straightforward, which may also have implications for the futures
+library ultimately landing in libcore.
 
 # Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -151,12 +162,21 @@ pub trait AsyncWrite {
 # Drawbacks
 [drawbacks]: #drawbacks
 
-- Ergonomic loss due to the need to pass an explicit parameter.
+The primary drawback here is an ergonomic hit, due to the need to explicitly thread through 
+a `Context` argument.
+
+For combinator implementations, this hit is quite minor.
+
+For larger custom future implementations, it remains possible to use TLS internally to recover the existing ergonomics, if desired.
+
+Finally, and perhaps most importantly, the explicit argument is never seen by users who only use
+futures via combinators or async-await syntax, so the ergonomic impact to such users in minimal.
+
 
 # Rationale and alternatives
 [alternatives]: #alternatives
 
-- Don't require an explicit parameter and use TLS instead (status quo).
+The two-stage design (splitting `Context` and `Waker`) is useful both for efficial task-local storage, and to provide space for debugging "hooks" in later iterations of the library.
 
 # Unresolved questions
 [unresolved]: #unresolved-questions
