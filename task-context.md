@@ -189,3 +189,7 @@ The two-stage design (splitting `Context` and `Waker`) is useful both for effici
   `resume`, a pointer could be passed through that interface. Otherwise, it
   would be necessary to pass the pointer through TLS when calling into
   generators.
+
+- The `task::Context::with_local` function can now likely be replaced by
+  `HashMap`-like entry and accessor APIs. What should the precise API
+  surface for accessing task-locals look like?
