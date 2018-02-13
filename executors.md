@@ -141,11 +141,11 @@ However, the rest of the API is more interesting:
 
 ```rust
 impl LocalPool {
-    // runs the executor until `f` is resolved, spawning subtasks onto `spawn`
-    fn run_until<F, S>(&self, f: F, spawn: S) -> Result<F::Item, F::Error>
-        where F: Future, S: Spawn;
+    // runs the executor until `f` is resolved, spawning subtasks onto `exec`
+    fn run_until<F, S>(&self, f: F, exec: E) -> Result<F::Item, F::Error>
+        where F: Future, E: Executor;
 
-    // a future that resolves when *all* spawned futures have resolved
+    // a future that completes when the executor has completed all of its tasks
     fn all_done(&self) -> impl Future<Item = (), Error = ()>;
 
     // spawns a possibly non-Send future, possible due to single-threaded execution.
