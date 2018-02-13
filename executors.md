@@ -42,7 +42,7 @@ First, in `futures-core` we define a general purpose executor interface:
 
 ```rust
 pub trait Executor {
-    fn spawn(&mut self, f: Box<Future<Item = (), Error = ()> + Send>) -> Result<(), SpawnError>;
+    fn spawn(&self, f: Box<Future<Item = (), Error = ()> + Send>) -> Result<(), SpawnError>;
 
     /// Provides a best effort **hint** to whether or not `spawn` will succeed.
     ///
@@ -81,12 +81,12 @@ object, which allows us to provide the following methods:
 impl task::Context {
     // A convenience for spawning onto the current default executor,
     // **panicking** if the executor fails to spawn
-    fn spawn<F>(&mut self, F) -> Result<(), SpawnError>
+    fn spawn<F>(&self, F) -> Result<(), SpawnError>
         where F: Future<Item = (), Error = ()> + Send + 'static;
 
     // Get direct access to the default executor, which can be used
     // to deal with spawning failures
-    fn executor(&mut self) -> &mut Executor;
+    fn executor(&self) -> &mut Executor;
 }
 ```
 
