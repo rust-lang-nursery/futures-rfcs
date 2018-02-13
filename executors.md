@@ -22,9 +22,9 @@ RFCs, harmonizing their designs.
 
 The design in this RFC has the following goals:
 
-- Add a core assumption that tasks are *always* able to spawn additional tasks,
-  avoiding the need to reflect this at the API level. (Note: this assumption is
-  only made in contexts that also assume an allocator.)
+- Add a core assumption that tasks are able to spawn additional tasks, avoiding
+  the need to reflect this at the API level. (Note: this assumption is only made
+  in contexts that also assume an allocator.)
 
 - Provide fine-grained control over which executor is used to fulfill that assumption.
 
@@ -36,7 +36,7 @@ Reform], but also makes some improvements to the `current_thread` design.
 
 # Proposed design
 
-## The core executor abstraction: `Spawn`
+## The core executor abstraction: `Executor`
 
 First, in `futures-core` we define a general purpose executor interface:
 
@@ -81,7 +81,7 @@ object, which allows us to provide the following methods:
 impl task::Context {
     // A convenience for spawning onto the current default executor,
     // **panicking** if the executor fails to spawn
-    fn spawn<F>(&self, F) -> Result<(), SpawnError>
+    fn spawn<F>(&self, F)
         where F: Future<Item = (), Error = ()> + Send + 'static;
 
     // Get direct access to the default executor, which can be used
@@ -106,7 +106,7 @@ The `ThreadPool` executor works basically like `CpuPool` today:
 
 ```rust
 struct ThreadPool { ... }
-impl Spawn for ThreadPool { ... }
+impl Executor for ThreadPool { ... }
 
 impl ThreadPool {
     // sets up a pool with the default number of threads
@@ -129,7 +129,7 @@ like `ThreadPool`:
 ```rust
 // Note: not `Send` or `Sync`
 struct LocalPool { ... }
-impl Spawn for LocalPool { .. }
+impl Executor for LocalPool { .. }
 
 impl LocalPool {
     // create a new single-threaded executor
@@ -182,7 +182,7 @@ frameworks (perhaps Tokio) can provide more opinionated defaults.
 This stance shows up particularly in the design of `LocalPool`, which differs
 from `current_thread` in providing flexibility about executor routing and
 completion. It's possible that this will re-open some of the footguns that
-`current_thread` was trying to avoid, but the explicit `spawn` parameter and
+`current_thread` was trying to avoid, but the explicit `exec` parameter and
 `all_done` future hopefully make things more clear.
 
 Unlike `current_thread`, the `LocalPool` design does not rely on TLS, instead
@@ -190,7 +190,7 @@ requiring access to `LocalPool` in order to spawn. This reflects a belief that,
 especially with borrowng + async/await, most spawning should go through the
 default executor, which will usually be a thread pool.
 
-Finally, the `Spawn` trait is more restrictive than the futures 0.1 executor
+Finally, the `Executor` trait is more restrictive than the futures 0.1 executor
 design, since it is tied to boxed, sendable futures. That's necessary when
 trying to provide a *universal* executor assumption, which needs to use dynamic
 dispatch throughout. This assumption is avoided in `no_std` contexts, and in
