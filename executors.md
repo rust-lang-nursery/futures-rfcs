@@ -38,30 +38,55 @@ Reform], but also makes some improvements to the `current_thread` design.
 
 ## The core executor abstraction: `Spawn`
 
-First, in `futures-core` we provide a basic definition of a general-purpose
-executor:
+First, in `futures-core` we define a general purpose executor interface:
 
 ```rust
-trait Spawn {
-    fn spawn(&self, f: Box<Future<Item = (), Error = ()> + Send>);
+pub trait Executor {
+    fn spawn(&mut self, f: Box<Future<Item = (), Error = ()> + Send>) -> Result<(), SpawnError>;
+
+    /// Provides a best effort **hint** to whether or not `spawn` will succeed.
+    ///
+    /// This allows a caller to avoid creating the task if the call to `spawn` will fail. This is
+    /// similar to `Sink::poll_ready`, but does not provide any notification when the state changes
+    /// nor does it provide a **guarantee** of what `spawn` will do.
+    fn status(&self) -> Result<(), SpawnError> {
+        Ok(())
+    }
+
+    // Note: also include hooks to support downcasting
+}
+
+// opaque struct
+pub struct SpawnError { .. }
+
+impl SpawnError {
+    pub fn at_capacity() -> SpawnError { .. }
+    pub fn is_at_capacity(&self) -> bool { .. }
+
+    pub fn shutdown() -> SpawnError { .. }
+    pub fn is_shutdown(&self) -> bool { .. }
+
+    // ...
 }
 ```
 
-The `Spawn` trait is quite straightforward (some alternatives and tradeoffs are
-discussed in the next section), and crucially is object-safe.
+The `Executor` trait is pretty straightforward (some alternatives and tradeoffs
+are discussed in the next section), and crucially is object-safe. Executors can
+refuse to spawn, though the default surface-level API glosses over that fact.
 
 We then build in an executor to the task context, stored internally as a trait
 object, which allows us to provide the following methods:
 
 ```rust
 impl task::Context {
-    // Spawn onto the current default executor
-    fn spawn<F>(&self, F)
+    // A convenience for spawning onto the current default executor,
+    // **panicking** if the executor fails to spawn
+    fn spawn<F>(&mut self, F) -> Result<(), SpawnError>
         where F: Future<Item = (), Error = ()> + Send + 'static;
 
-    // Run the given closure with a context using a new default executor
-    fn with_spawn<S, F, R>(&mut self, spawn: S, f: F) -> R
-        where S: Spawn, F: FnOnce(&mut task::Context) -> R;
+    // Get direct access to the default executor, which can be used
+    // to deal with spawning failures
+    fn executor(&mut self) -> &mut Executor;
 }
 ```
 
@@ -86,9 +111,6 @@ impl Spawn for ThreadPool { ... }
 impl ThreadPool {
     // sets up a pool with the default number of threads
     fn new() -> ThreadPool;
-
-    // starts up the worker threads
-    fn run();
 }
 ```
 
@@ -142,6 +164,7 @@ lets you *choose* where to spawn any subtasks. If you want something like
 On the other hand, if you are trying to run some futures-based code in a
 synchronous setting (where you'd use `wait` today), you might prefer to direct
 any spawned subtasks onto a `ThreadPool` instead.
+
 
 # Rationale, drawbacks and alternatives
 [alternatives]: #alternatives
