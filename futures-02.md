@@ -1,8 +1,3 @@
-- Feature Name: futures-2
-- Start Date: 2018-01-22
-- RFC PR:
-- Rust Issue:
-
 # Summary
 [summary]: #summary
 
